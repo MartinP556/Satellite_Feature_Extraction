@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from PIL import Image
+import xarray as xr
 
 def max_in_region(df):
     if len(df) == 0:
@@ -10,15 +11,15 @@ def max_in_region(df):
     
 def max_value_int(df, window_size=8):
     '''Returns the maximum value and location of maximum value in windows of size window_size'''
-    #df.loc[:, 'formatted_time'] = pd.DatetimeIndex(df['formatted_time'])
+    #df.loc[:, 'date'] = pd.DatetimeIndex(df['date'])
     if len(df) == 0:
         return None
     else:
-        return df.infer_objects().groupby(pd.Grouper(key='formatted_time',freq=f'{window_size}D'))[df.columns].apply(max_in_region, include_groups=True)
+        return df.infer_objects().groupby(pd.Grouper(key='date',freq=f'{window_size}D'))[df.columns].apply(max_in_region, include_groups=True)
     
 def map_max_value_int(df, window_size = 8, bands = ['NDVI']):
     '''Returns the maximum value and location of maximum value in windows of size window_size'''
-    df.loc[:, 'formatted_time'] = pd.DatetimeIndex(df['formatted_time'])
+    df.loc[:, 'date'] = pd.DatetimeIndex(df['date'])
     for latlon_index, latlon in enumerate(df.loc[:, ['lat', 'lon']].drop_duplicates().values):
         #print(latlon)
         df_latlon = df.loc[(df['lat'] == latlon[0]) & (df['lon'] == latlon[1])].dropna()
@@ -29,10 +30,19 @@ def map_max_value_int(df, window_size = 8, bands = ['NDVI']):
             df_max_value_int_all = df_max_value_int
         else:
             df_max_value_int_all = pd.concat([df_max_value_int_all, df_max_value_int])
-    df_max_value_int_all = df_max_value_int_all.rename(columns = {'formatted_time': 'raw_time'}).reset_index().rename(columns = {'formatted_time': 'time'})
+    df_max_value_int_all = df_max_value_int_all.rename(columns = {'date': 'raw_time'}).reset_index().rename(columns = {'date': 'time'})
     for band in bands:
         df_max_value_int_all[band] = np.interp(df_max_value_int_all['time'], df_max_value_int_all['raw_time'], df_max_value_int_all[band])
     return df_max_value_int_all
+
+def resample_linear(ds):
+    ds['date'] = pd.to_datetime(pd.to_datetime(ds['date'], format='%Y-%m-%d-%H-%M-%S').dt.date)
+    ds.set_index('date', inplace=True)
+    ds = ds.resample('D').asfreq().interpolate()
+    ds.reset_index(inplace=True)
+    ds.rename(columns={'date': 'time'}, inplace=True)
+    return ds
+
 
 def randomly_sample_windows(df, m_window_size = 6):
     # First sample a location:
@@ -48,8 +58,8 @@ def randomly_sample_windows(df, m_window_size = 6):
 
 def make_df_samples(df, sample_number = 100, m_window_size = 5, seed = 0):
     '''Randomly sample windows of length m_window_size from the maximum value composited time series in df'''
-    df_time_adjust = df.rename(columns={'formatted_time': 'actual_time'}).reset_index()
-    df_time_adjust['time from edge'] = (df_time_adjust['actual_time'] - df_time_adjust['formatted_time']).dt.days
+    df_time_adjust = df.copy()
+    df_time_adjust['time from edge'] = (df_time_adjust['raw_time'] - df_time_adjust['time']).dt.days
     np.random.seed(seed)
     first = True
     for count in range(sample_number):
@@ -69,8 +79,8 @@ def make_df_samples(df, sample_number = 100, m_window_size = 5, seed = 0):
 
 def make_tensor_from_timeseries(df, sample_number = 100, m_window_size = 5, seed = 0, format_choice = 'pytorch'):
     '''Randomly sample windows of length m_window_size from the maximum value composited time series in df'''
-    df_time_adjust = df.rename(columns={'formatted_time': 'actual_time'}).reset_index()
-    df_time_adjust['time from edge'] = (df_time_adjust['actual_time'] - df_time_adjust['formatted_time']).dt.days
+    df_time_adjust = df.copy()
+    df_time_adjust['time from edge'] = (df_time_adjust['raw_time'] - df_time_adjust['time']).dt.days
     np.random.seed(seed)
     first = True
     for count in range(sample_number):
@@ -126,6 +136,7 @@ def restrict_to_growing_season(ds, year, SOS, EOS):
         start_of_period = (pd.Timestamp(f'{year}-01-01') + pd.Timedelta(SOS - 20, 'D'))#.tz_localize('UTC') 
         end_of_period = (pd.Timestamp(f'{year}-01-01') + pd.Timedelta(EOS + 20, 'D'))#.tz_localize('UTC')
     ds5 = ds.copy()
-    ds5['formatted_time'] = pd.to_datetime(ds5['formatted_time'], format='%Y-%m-%d-%H-%M-%S')
-    return ds5.loc[(ds5['formatted_time'] > start_of_period) & (ds5['formatted_time'] < end_of_period)]
+    ds5['date'] = pd.to_datetime(ds5['date'], format='%Y-%m-%d-%H-%M-%S')
+    return ds5.loc[(ds5['date'] > start_of_period) & (ds5['date'] < end_of_period)]
+
 

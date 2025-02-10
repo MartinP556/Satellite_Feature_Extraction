@@ -94,7 +94,8 @@ def calculate_append_LSP_frame(results, values, Times, first_date, LSP_method, y
     return results
 
 
-def LSP_at_stations(ds, start_year, end_year, LSP_method = 'double_logistic'):
+
+def LSP_at_stations(ds, start_year, end_year, LSP_method = 'double_logistic', interp_method = 'MVI'):
     results = initialize_LSP_frame(LSP_method)
     print(results)
     for year in range(start_year, end_year + 1):
@@ -107,10 +108,13 @@ def LSP_at_stations(ds, start_year, end_year, LSP_method = 'double_logistic'):
             else:
                 print(f'Station {station} in {year} has no observations')
                 continue
-            max_value_interpolated = data_cleaning.map_max_value_int(ds_station_year, window_size=4) #data_cleaning.
-            first_date = pd.DatetimeIndex(max_value_interpolated['time']).min()
-            Times = (pd.DatetimeIndex(max_value_interpolated['time']) - pd.DatetimeIndex(max_value_interpolated['time']).min()).days.values
-            NDVIs = max_value_interpolated['NDVI'].values
+            if interp_method == 'MVI':
+                ds_interpolated = data_cleaning.map_max_value_int(ds_station_year, window_size=4) #data_cleaning.
+            elif interp_method == 'linear':
+                ds_interpolated = data_cleaning.resample_linear(ds_station_year)
+            first_date = pd.DatetimeIndex(ds_interpolated['time']).min()
+            Times = (pd.DatetimeIndex(ds_interpolated['time']) - pd.DatetimeIndex(ds_interpolated['time']).min()).days.values
+            NDVIs = ds_interpolated['NDVI'].values
             try:
                 results = calculate_append_LSP_frame(results, NDVIs, Times, first_date, LSP_method, year, station)
             except:
