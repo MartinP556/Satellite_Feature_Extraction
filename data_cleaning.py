@@ -38,7 +38,9 @@ def map_max_value_int(df, window_size = 8, bands = ['NDVI']):
 def resample_linear(ds):
     ds['date'] = pd.to_datetime(pd.to_datetime(ds['date'], format='%Y-%m-%d-%H-%M-%S').dt.date)
     ds.set_index('date', inplace=True)
-    ds = ds.resample('D').asfreq().interpolate()
+    ds = ds[~ds.index.duplicated()]
+    ds= ds.resample('D').asfreq()#.infer_objects(copy=False)
+    ds.loc[:, ds.columns != 'reducer']  = ds.loc[:, ds.columns != 'reducer'].interpolate()
     ds.reset_index(inplace=True)
     ds.rename(columns={'date': 'time'}, inplace=True)
     return ds
@@ -139,4 +141,6 @@ def restrict_to_growing_season(ds, year, SOS, EOS):
     ds5['date'] = pd.to_datetime(ds5['date'], format='%Y-%m-%d-%H-%M-%S')
     return ds5.loc[(ds5['date'] > start_of_period) & (ds5['date'] < end_of_period)]
 
-
+def autocorrelation_matrix(ds, variable = 'NDVI', index_coord = 'index'):
+    X = (ds[variable] - ds[variable].mean(dim='sample')).values
+    return np.corrcoef(X.T)
