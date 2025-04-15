@@ -130,13 +130,13 @@ def add_EOS_to_df(df):
     df['EOS'] = WC_EOS(df['lon'], df['lat'])
     return df
 
-def restrict_to_growing_season(ds, year, SOS, EOS):
+def restrict_to_growing_season(ds, year, SOS, EOS, buffer = 20):
     if SOS > EOS:
-        start_of_period = (pd.Timestamp(f'{year}-01-01') + pd.Timedelta(SOS - 20, 'D'))#.tz_localize('UTC') 
-        end_of_period = (pd.Timestamp(f'{year + 1}-01-01') + pd.Timedelta(EOS + 20, 'D'))#.tz_localize('UTC')
+        start_of_period = (pd.Timestamp(f'{year}-01-01') + pd.Timedelta(SOS - buffer, 'D'))#.tz_localize('UTC') 
+        end_of_period = (pd.Timestamp(f'{year + 1}-01-01') + pd.Timedelta(EOS + buffer, 'D'))#.tz_localize('UTC')
     else:
-        start_of_period = (pd.Timestamp(f'{year}-01-01') + pd.Timedelta(SOS - 20, 'D'))#.tz_localize('UTC') 
-        end_of_period = (pd.Timestamp(f'{year}-01-01') + pd.Timedelta(EOS + 20, 'D'))#.tz_localize('UTC')
+        start_of_period = (pd.Timestamp(f'{year}-01-01') + pd.Timedelta(SOS - buffer, 'D'))#.tz_localize('UTC') 
+        end_of_period = (pd.Timestamp(f'{year}-01-01') + pd.Timedelta(EOS + buffer, 'D'))#.tz_localize('UTC')
     ds5 = ds.copy()
     ds5['date'] = pd.to_datetime(ds5['date'], format='%Y-%m-%d-%H-%M-%S')
     return ds5.loc[(ds5['date'] > start_of_period) & (ds5['date'] < end_of_period)]
