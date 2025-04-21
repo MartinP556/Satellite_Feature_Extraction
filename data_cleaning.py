@@ -132,8 +132,8 @@ def add_EOS_to_df(df):
 
 def restrict_to_growing_season(ds, year, SOS, EOS, buffer = 20):
     if SOS > EOS:
-        start_of_period = (pd.Timestamp(f'{year}-01-01') + pd.Timedelta(SOS - buffer, 'D'))#.tz_localize('UTC') 
-        end_of_period = (pd.Timestamp(f'{year + 1}-01-01') + pd.Timedelta(EOS + buffer, 'D'))#.tz_localize('UTC')
+        start_of_period = (pd.Timestamp(f'{year - 1}-01-01') + pd.Timedelta(SOS - buffer, 'D'))#.tz_localize('UTC') 
+        end_of_period = (pd.Timestamp(f'{year}-01-01') + pd.Timedelta(EOS + buffer, 'D'))#.tz_localize('UTC')
     else:
         start_of_period = (pd.Timestamp(f'{year}-01-01') + pd.Timedelta(SOS - buffer, 'D'))#.tz_localize('UTC') 
         end_of_period = (pd.Timestamp(f'{year}-01-01') + pd.Timedelta(EOS + buffer, 'D'))#.tz_localize('UTC')
