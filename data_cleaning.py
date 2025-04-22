@@ -3,6 +3,11 @@ import numpy as np
 from PIL import Image
 import xarray as xr
 
+def columns_to_datetime(ds, columns):
+    for colname in columns:
+        ds[colname] = pd.to_datetime(ds[colname], format='mixed')
+    return ds
+
 def max_in_region(df):
     if len(df) == 0:
         return df
